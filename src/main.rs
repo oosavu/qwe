@@ -1,5 +1,3 @@
-mod engine;
-
 extern crate anyhow;
 extern crate clap;
 extern crate cpal;
@@ -23,50 +21,9 @@ impl Opt {
     }
 }
 
-struct M1{
-    t: f32,
-    ins: Vec<Port>,
-    outs: Vec<Port>
-}
-
-impl Module for M1{
-    fn process(&mut self) {
-        self.t += 1.0;
-        self.outs[0].value = self.ins[0].value + self.t;
-    }
-    fn inputs(&mut self) -> &mut Vec<Port> {
-        &mut self.ins
-    }
-    fn outputs(&mut self) -> &mut Vec<Port> {
-        &mut self.outs
-    }
-
-}
-
-struct M2{
-    t: f32,
-    ins: Vec<Port>,
-    outs: Vec<Port>
-}
-impl Module for M2{
-    fn process(&mut self) {
-        self.t += 23.0;
-        self.outs[0].value = self.ins[0].value + self.t;
-    }
-    fn inputs(&mut self) -> &mut Vec<Port> {
-        &mut self.ins
-    }
-    fn outputs(&mut self) -> &mut Vec<Port> {
-        &mut self.outs
-    }
-}
-
-
-
-
 fn main() -> anyhow::Result<()> {
-    let mut e: Engine;
-    e.gogogo();
+    // let mut e: Engine;
+    // e.gogogo();
 
     let opt = Opt::from_args();
 
