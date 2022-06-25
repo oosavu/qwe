@@ -21,7 +21,7 @@ impl Opt {
     }
 }
 
-fn main() -> anyhow::Result<()> {
+fn soundtest() -> anyhow::Result<()> {
     // let mut e: Engine;
     // e.gogogo();
 
@@ -45,6 +45,18 @@ fn main() -> anyhow::Result<()> {
         cpal::SampleFormat::I16 => run::<i16>(&device, &config.into()),
         cpal::SampleFormat::U16 => run::<u16>(&device, &config.into()),
     }
+}
+
+slint::slint!{
+    HelloWorld := Window {
+        Text {
+            text: "hello world";
+            color: green;
+        }
+    }
+}
+fn main() {
+    HelloWorld::new().run();
 }
 
 pub fn run<T>(device: &cpal::Device, config: &cpal::StreamConfig) -> Result<(), anyhow::Error>
