@@ -1,6 +1,7 @@
 extern crate anyhow;
 extern crate clap;
 extern crate cpal;
+extern crate biser;
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -56,6 +57,8 @@ slint::slint!{
     }
 }
 fn main() {
+    let num = 10;
+    println!("Hello, world! {} plus one is {}!", num, biser::add_one(num));
     HelloWorld::new().run();
 }
 

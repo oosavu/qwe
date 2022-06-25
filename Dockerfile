@@ -16,14 +16,12 @@ FROM ghcr.io/cross-rs/armv7-unknown-linux-gnueabihf:main
 RUN apt-get update && apt-get install -y --no-install-recommends apt-utils
 RUN dpkg --add-architecture armhf
 RUN apt-get update && apt-get -y install libasound2-dev:armhf
-#RUN apt-get -y install libxcb-shape0-dev:armhf libxcb-xfixes0-dev libxkbcommon-dev:armhf libfontconfig-dev:armhf
 RUN apt-get -y install  libfontconfig1-dev:armhf libxcb1-dev:armhf libxcb-render0-dev:armhf libxcb-shape0-dev:armhf libxcb-xfixes0-dev:armhf libxkbcommon-dev:armhf python3  libfontconfig1-dev
 ENV PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig
-#ENV CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_RUSTFLAGS="-L /usr/lib/arm-linux-gnueabihf $CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_RUSTFLAGS"
-#ENV CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_RUSTFLAGS="-C link-args=-Wl,-rpath-link,/usr/lib/arm-linux-gnueabihf $CARGO_TARGET_ARM_UNKNOWN_LINUX_GNUEABIHF_RUSTFLAGS"
-#cross build --target armv7-unknown-linux-gnueabihf
 
 
+
+#compile cross build --target armv7-unknown-linux-gnueabihf
 
 #in malina:
 #sudo apt-get install g++ pkg-config libx11-dev libasound2-dev libudev-dev
