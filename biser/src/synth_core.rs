@@ -1,9 +1,9 @@
-// use std::borrow::{Borrow, BorrowMut};
 use std::rc::Rc;
 use std::cell::RefCell;
 
 const CHANELS: usize = 16;
 
+#[derive(Clone, Copy)]
 struct Port {
     value: f32,
 }
@@ -15,14 +15,17 @@ trait Module {
 }
 
 struct Cable {
-    input_module: Rc<dyn Module>,
-    output_module: Rc<dyn Module>,
+    input_module: Rc<RefCell<dyn Module>>,
+    output_module: Rc<RefCell<dyn Module>>,
+    input_port: usize,
+    output_port: usize
 }
-#[derive(Default)]
+
 struct M1 {
     t: f32,
     ins: Vec<Port>,
     outs: Vec<Port>,
+
 }
 
 impl Module for M1 {
@@ -38,11 +41,31 @@ impl Module for M1 {
         &mut self.outs
     }
 }
-#[derive(Default)]
+
+impl Default for M1{
+    fn default() -> Self {
+        M1{
+            t: 0.0,
+            ins: vec![Port{ value: 0.0 }],
+            outs: vec![Port{ value: 0.0 }],
+        }
+    }
+}
+
 struct M2 {
     t: f32,
     ins: Vec<Port>,
     outs: Vec<Port>,
+}
+
+impl Default for M2{
+    fn default() -> Self {
+        M2{
+            t: 0.0,
+            ins: vec![Port{ value: 0.0 }],
+            outs: vec![Port{ value: 0.0 }],
+        }
+    }
 }
 
 impl Module for M2 {
@@ -62,86 +85,42 @@ impl Module for M2 {
 
 pub struct Engine {
     modules: Vec<Rc<RefCell<dyn Module>>>,
-
-    //qwe: Rc<RefCell<dyn Module>>,
     cables: Vec<Cable>,
 }
-fn print_type_of<T>(_: &T) {
-    println!("sdfsdf {}", std::any::type_name::<T>())
-}
+// fn print_type_of<T>(_: &T) {
+//     println!("sdfsdf {}", std::any::type_name::<T>())
+// }
 
 impl Engine {
     pub fn gogogo(&mut self) {
-        //println!("sdfsdf ");
         for _ in 1..10 {
-            // print_type_of(self);
-            //println!("sdfsdf ");
             for m in self.modules.iter_mut() {
-                print_type_of(&m.borrow_mut().process());
-                //*m.as_ref().borrow_mut().process();
+                &m.borrow_mut().process();
             }
-
-           //  // let q = 1233;
-           //  // let mut sdfsdf : RefCell<i32> = RefCell::new(23);
-           //  // *sdfsdf.borrow_mut() = q;
-           //
-           //  // let q = 1233;
-           //  // let mut sdfsdf : Rc<RefCell<i32>> = Rc::new(RefCell::new(23));
-           //  // *sdfsdf.as_ref().borrow_mut() = q;
-           //
-           //  let q = 1233;
-           //  let mut sdfsdf : Vec<Rc<RefCell<i32>>> = Vec::new();
-           //  //let mut sdfsdf : Vec<Rc<i32>> = Vec::new();
-           //  for m in sdfsdf.iter_mut() {
-           //      //m.as_ref()
-           //      *m.as_ref().borrow_mut() = 2;
-           //      // let asd = m.as_ref();
-           //      // //let qwe = asd.borrow_mut();
-           //      // *asd.borrow_mut() = 2;
-           //      // asd = q;
-           //      //     let mut zxc = m.as_ref().get_mut();
-           //      //     let sdf = zxc.process();
-           //  }
-           //
-           //  // let mut sdfsdf : Vec<Rc<RefCell<dyn Module>>>;
-           //  // for m in sdfsdf.iter_mut() {
-           //  //     let mut zxc = m.as_ref().get_mut();
-           //  //     let sdf = zxc.process();
-           //  //    // sdf.process();
-           //  //     // m.as_ref().get_mut().process();
-           //  // }
-           //
-           //
-           //  //let mut qwe: Rc<RefCell<dyn Module>> = Rc::new(RefCell::new(M1::default()));
-           //  //let mut asd = qwe.get_mut();
-           // // let mut zxc = qwe.as_ref().borrow_mut().process();
-           //  //zxc.process();
-           //  // *zxc.value = 23.0;
-           //  // for m in &mut self.modules {
-           //  //     m.get_mut().value = 23.0;
-           //  // }
-           //  // self.qwe.as_ref().
-           //  // self.qwe.borrow_mut() = s;
-           //  // for m in &mut self.modules {
-           //  //     // let qwe: &mut Rc<RefCell<dyn Module>> = m.borrow_mut();
-           //  //     *m.process();
-           //  // }
-           //  // for c in self.cables.iter_mut() {
-           //  //     let v = *c.output_module;
-           //  //     let v2 = v.borrow_mut().inputs();
-           //  //         v[0].value = 23.0;
-           //  //        // c.input_module.borrow_mut().outputs()[0].borrow_mut().value
-           //  // }
+            for c in self.cables.iter_mut() {
+                let mut input_m = c.input_module.as_ref().borrow_mut();
+                let mut output_m = c.output_module.as_ref().borrow_mut();
+                input_m.outputs()[c.output_port] = output_m.inputs()[c.input_port];
+            }
         }
     }
 }
 
 impl Default for Engine{
     fn default() -> Self {
+        let  mods: Vec<Rc<RefCell<dyn Module>>> = vec![Rc::new(RefCell::new(M1::default())),
+                         Rc::new(RefCell::new(M2::default()))];
+        let m1 = mods[0].clone();
+        let m2 = mods[1].clone();
+
         Engine {
-            modules: vec![Rc::new(RefCell::new(M1::default())),
-                          Rc::new(RefCell::new(M2::default()))],
-            cables: vec![]
+            modules: mods,
+            cables: vec![Cable{
+                input_module: m1,
+                output_module: m2,
+                input_port: 0,
+                output_port: 0
+            }]
         }
     }
 }
