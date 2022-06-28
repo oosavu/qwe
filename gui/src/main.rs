@@ -1,52 +1,4 @@
-extern crate anyhow;
-extern crate clap;
-extern crate cpal;
 extern crate biser;
-
-use std::cell::RefCell;
-use std::rc::Rc;
-use clap::arg;
-use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-
-#[derive(Debug)]
-struct Opt {
-    device: String,
-}
-
-impl Opt {
-    fn from_args() -> Self {
-        let app = clap::Command::new("beep").arg(arg!([DEVICE] "The audio device to use"));
-        let matches = app.get_matches();
-        let device = matches.value_of("DEVICE").unwrap_or("default").to_string();
-        Opt { device }
-    }
-}
-
-fn soundtest() -> anyhow::Result<()> {
-    // let mut e: Engine;
-    // e.gogogo();
-
-    let opt = Opt::from_args();
-
-    let host = cpal::default_host();
-    let device = if opt.device == "default" {
-        host.default_output_device()
-    } else {
-        host.output_devices()?
-            .find(|x| x.name().map(|y| y == opt.device).unwrap_or(false))
-    }
-        .expect("failed to find output device");
-    println!("Output device: {}", device.name()?);
-
-    let config = device.default_output_config().unwrap();
-    println!("Default output config: {:?}", config);
-
-    match config.sample_format() {
-        cpal::SampleFormat::F32 => run::<f32>(&device, &config.into()),
-        cpal::SampleFormat::I16 => run::<i16>(&device, &config.into()),
-        cpal::SampleFormat::U16 => run::<u16>(&device, &config.into()),
-    }
-}
 
 slint::slint!{
     HelloWorld := Window {
@@ -56,50 +8,30 @@ slint::slint!{
         }
     }
 }
+
 fn main() {
-    let num = 10;
-    println!("Hello, world! {} plus one is {}!", num, biser::add_one(num));
-    HelloWorld::new().run();
+    biser::soundtest();
+    let mut e: biser::Engine = biser::Engine::default();
+    e.gogogo();
+
+    // HelloWorld::new().run();
 }
 
-pub fn run<T>(device: &cpal::Device, config: &cpal::StreamConfig) -> Result<(), anyhow::Error>
-    where
-        T: cpal::Sample,
-{
-    let sample_rate = config.sample_rate.0 as f32;
-    let channels = config.channels as usize;
-
-    // Produce a sinusoid of maximum amplitude.
-    let mut sample_clock = 0f32;
-    let mut next_value = move || {
-        sample_clock = (sample_clock + 1.0) % sample_rate;
-        (sample_clock * 440.0 * 2.0 * std::f32::consts::PI / sample_rate).sin()
-    };
-
-    let err_fn = |err| eprintln!("an error occurred on stream: {}", err);
-
-    let stream = device.build_output_stream(
-        config,
-        move |data: &mut [T], _: &cpal::OutputCallbackInfo| {
-            write_data(data, channels, &mut next_value)
-        },
-        err_fn,
-    )?;
-    stream.play()?;
-
-    std::thread::sleep(std::time::Duration::from_millis(1000));
-
-    Ok(())
-}
-
-fn write_data<T>(output: &mut [T], channels: usize, next_sample: &mut dyn FnMut() -> f32)
-    where
-        T: cpal::Sample,
-{
-    for frame in output.chunks_mut(channels) {
-        let value: T = cpal::Sample::from::<f32>(&next_sample());
-        for sample in frame.iter_mut() {
-            *sample = value;
-        }
-    }
-}
+//
+// impl Engine {
+//     pub fn gogogo(&mut self) {
+//         for _ in 1..10 {
+//             for m in self.modules {
+//                 *m.as_ref().borrow_mut().process();
+//             }
+//
+//             for c in self.cables {
+//                 let v = *c.output_module;
+//                 let v2 = v.borrow_mut().inputs();
+//                 v[0].value = 23.0;
+//                 let input_m = c.input_module.as_ref().borrow_mut();
+//                 let output_m = c.output_module.as_ref().borrow_mut();
+//
+//                 input_m.inputs()[c.input_port] = 0;
+//                 // c.input_module.borrow_mut().outputs()[0].borrow_mut().value
+//             }

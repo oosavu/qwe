@@ -8,9 +8,6 @@ slint-build = "0.2.4"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cpal = { version = "*" }
-anyhow = { version = "*" }
-clap = { version = "*" }
 slint = "0.2.4"
 biser = { path = "../biser" }
 

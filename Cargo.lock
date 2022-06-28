@@ -300,6 +300,11 @@ dependencies = [
 [[package]]
 name = "biser"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "cpal",
+]
 
 [[package]]
 name = "bit_field"
@@ -1483,10 +1488,7 @@ dependencies = [
 name = "gui"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "biser",
- "clap",
- "cpal",
  "slint",
  "slint-build",
 ]
