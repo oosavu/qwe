@@ -1,5 +1,6 @@
 mod synth_core;
-
+mod test_modules;
+mod audio_o;
 extern crate anyhow;
 extern crate clap;
 extern crate cpal;
@@ -7,6 +8,8 @@ use clap::arg;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 
 pub use synth_core::*;
+pub use test_modules::*;
+pub use audio_o::*;
 
 #[derive(Debug)]
 struct Opt {

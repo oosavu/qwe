@@ -12,7 +12,7 @@ slint::slint!{
 
 fn main() {
     //biser::soundtest();
-    let mut e = biser::Engine::default();
+    let mut e = biser::test_engine();
     e.start();
     thread::sleep(Duration::from_millis(1000));
     e.stop();
