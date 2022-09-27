@@ -1,6 +1,7 @@
 use crate::synth_core::*;
 use crate::audio_o::*;
-struct M1 {
+
+pub(crate) struct M1 {
     t: f32,
     ins: Vec<Port>,
     outs: Vec<Port>,
@@ -31,7 +32,7 @@ impl Default for M1 {
     }
 }
 
-struct M2 {
+pub struct M2 {
     t: f32,
     ins: Vec<Port>,
     outs: Vec<Port>,
@@ -61,25 +62,4 @@ impl Module for M2 {
     }
 }
 
-
-pub fn test_engine() -> Engine {
-    let mut mods: Vec<Mutex<Arc<dyn Module>>> = vec![Mutex::new(Arc::new(M1::default())),
-                                                     Mutex::new(Arc::new(ModuleO::default()))];
-
-    Engine {
-        handle: None,
-        alive: Arc::new(Default::default()),
-        core: Arc::new(std::sync::Mutex::new(RealTimeCore {
-            modules_pointers: vec![getPointer(&mut mods, 0), getPointer(&mut mods, 1)],
-            cable_core: vec![],
-        })),
-        cables: vec![Mutex::new(Cable {
-            input_module_p: getPointer(&mut mods, 0),
-            output_module_p: getPointer(&mut mods, 1),
-            input_port: 0,
-            output_port: 0,
-        })],
-        modules: mods,
-    }
-}
 
