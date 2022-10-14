@@ -1,10 +1,12 @@
 pub use std::sync::atomic::{AtomicBool, Ordering};
 pub use std::sync::{Arc, Mutex};
 pub use std::{thread, time};
+use std::ops::Add;
 pub use std::ptr::NonNull;
+use std::time::{Duration, SystemTime};
 
 //const CHANELS: usize = 16;
-const TimeFrameSize: usize = 64;
+const TimeFrameSize: i64 = 64;
 
 #[derive(Clone, Copy)]
 pub struct Port {
@@ -28,6 +30,9 @@ pub struct Cable {
 struct RealTimeCore {
     pub modules_pointers: Vec<ModulePointer>,
     pub cable_core: Vec<Cable>,
+    pub sample_rate: i64,
+    pub current_time: SystemTime,
+    alive: Arc<AtomicBool>,
 }
 
 unsafe impl Send for RealTimeCore {}
@@ -36,8 +41,7 @@ unsafe impl Sync for RealTimeCore {}
 impl RealTimeCore {
     pub fn compute_frame(&mut self) {
         unsafe {
-            // let mut qweqwe = 123;
-            // //qweqwe = 123123;
+           // let now = SystemTime::now();
             for _ in 0..TimeFrameSize {
                 for m in self.modules_pointers.iter_mut() {
                     let qwe = &mut *m.unwrap().as_mut();
@@ -61,21 +65,33 @@ pub struct Engine {
     core: Arc<Mutex<RealTimeCore>>,
 }
 
-// fn print_type_of<T>(_: &T) {
-//     println!("sdfsdf {}", std::any::type_name::<T>())
-// }
-
-
 impl Engine {
-    pub fn start(&mut self) {//-> std::thread::JoinHandle<()>{
+    pub fn start(&mut self) {
         let cor = self.core.clone();
-        let alive = self.alive.clone();
+
         self.handle = Some(std::thread::spawn(move || {
+            let mut alive = cor.lock().unwrap().alive.clone();
             alive.store(true, Ordering::SeqCst);
+            {
+                let mut cor = cor.lock().unwrap();
+                cor.current_time = SystemTime::now();
+            }
+            let mut samples_count : i64 = 0;
             while alive.load(Ordering::SeqCst) {
-                let mut cor = cor.lock().unwrap();//.expect("can't get mut");
+                let mut cor = cor.lock().unwrap();
+                let duration = cor.current_time.elapsed().unwrap().as_millis() as i64;
+                let required_samples = cor.sample_rate * duration / 1000;
+                if(required_samples < samples_count)
+                {
+                    let pause_millis = (samples_count - required_samples) * 1000i64 / cor.sample_rate;
+                    //dbg!(pause_millis);
+                    thread::sleep(time::Duration::from_millis(std::cmp::max(pause_millis as u64, 1)));
+                    continue;
+                }
                 cor.compute_frame();
-                thread::sleep(time::Duration::from_millis(10));
+                samples_count = samples_count + TimeFrameSize;
+                dbg!(samples_count);
+                //thread::sleep(time::Duration::from_millis(10));
             }
         }));
     }
@@ -85,6 +101,8 @@ impl Engine {
         self.handle
             .take().expect("Called stop on non-running thread")
             .join().expect("Could not join spawned thread");
+        let cor = self.core.lock().unwrap();
+        dbg!(cor.current_time.elapsed());
     }
 
 
@@ -95,36 +113,13 @@ impl Engine {
     }
 }
 
-//
-// impl Default for Engine {
-//     fn default() -> Self {
-//         Engine {
-//             handle: None,
-//             alive: Arc::new(Default::default()),
-//             core: Arc::new(std::sync::Mutex::new(RealTimeCore {
-//                 modules_pointers: vec![],
-//                 cable_core: vec![],
-//             })),
-//             cables: vec![Mutex::new(Cable{
-//                 input_module_p: None,
-//                 output_module_p: None,
-//                 output_port: 0,
-//                 input_port: 0
-//             })],
-//             modules: vec![]
-//         }
-//     }
-// }
-
-
-
 pub fn test_engine() -> Engine {
     let mut mods: Vec<Mutex<Arc<dyn Module>>> = vec![Mutex::new(Arc::new(crate::sine::ModuleSine::default())),
                                                      Mutex::new(Arc::new(crate::audio_o::ModuleO::default()))];
-
+    let alive: Arc<AtomicBool> = Arc::new(AtomicBool::default());
     Engine {
         handle: None,
-        alive: Arc::new(Default::default()),
+        alive: alive.clone(),
         core: Arc::new(std::sync::Mutex::new(RealTimeCore {
             modules_pointers: vec![Engine::get_pointer(&mut mods, 0), Engine::get_pointer(&mut mods, 1)],
             cable_core: vec![Cable {
@@ -133,6 +128,9 @@ pub fn test_engine() -> Engine {
                 input_port: 0,
                 output_port: 0,
             }],
+            sample_rate: 48000,
+            current_time: SystemTime::now(),
+            alive: alive.clone(),
         })),
         cables: vec![Mutex::new(Cable {
             input_module_p: Engine::get_pointer(&mut mods, 0),

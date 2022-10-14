@@ -8,8 +8,8 @@ pub struct ModuleSine {
 
 impl Module for ModuleSine {
     fn process(&mut self) {
-        let sample_rate = 44100.0f32;
-        self.sample_clock = (self.sample_clock + 1.0) % sample_rate;
+        let sample_rate = 48000.0f32;
+        self.sample_clock = (self.sample_clock + 1.0);
 
         self.outs[0].value = (self.sample_clock * 440.0 * 2.0 * std::f32::consts::PI / sample_rate).sin();
         //println!("outso:{}", self.outs[0].value)
