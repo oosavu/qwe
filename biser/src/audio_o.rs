@@ -6,12 +6,13 @@ use std::arch::x86_64::_rdrand32_step;
 use crate::synth_core::*;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::StreamError;
+use crate::*;
 
 use ringbuf::{Consumer, Producer, RingBuffer};
 
 pub struct ModuleO {
-    ins: Vec<Port>,
-    outs: Vec<Port>,
+    ins: Vec<AudioPort>,
+    outs: Vec<AudioPort>,
     host: cpal::Host,
     device: cpal::Device,
     config: cpal::StreamConfig,
@@ -25,13 +26,13 @@ impl Module for ModuleO {
             static mut count_i: isize = 0;
             count_i = count_i + 1;
 //            dbg!(count_i);
-            self.producer.push(self.ins[0].value);
+            self.producer.push(self.ins[0].value[0]);
         }
     }
-    fn inputs(&mut self) -> &mut Vec<Port> {
+    fn inputs(&mut self) -> &mut Vec<AudioPort> {
         &mut self.ins
     }
-    fn outputs(&mut self) -> &mut Vec<Port> {
+    fn outputs(&mut self) -> &mut Vec<AudioPort> {
         &mut self.outs
     }
 }
@@ -103,7 +104,7 @@ impl Default for ModuleO {
         stream.play().unwrap();
 
         ModuleO {
-            ins: vec![Port { value: 0.0 }],
+            ins: AudioPort::create_audio_ports(1),
             outs: vec![],
             host: host,
             device: device,

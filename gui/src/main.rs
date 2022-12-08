@@ -14,6 +14,6 @@ fn main() {
     //biser::soundtest();
     let mut e = biser::test_engine();
     e.start();
-    thread::sleep(Duration::from_millis(2000));
+    thread::sleep(Duration::from_millis(3000));
     e.stop();
 }

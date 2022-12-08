@@ -1,8 +1,8 @@
 use crate::synth_core::*;
-
+use crate::*;
 pub struct ModuleSine {
-    ins: Vec<Port>,
-    outs: Vec<Port>,
+    ins: Vec<AudioPort>,
+    outs: Vec<AudioPort>,
     sample_clock: f32,
 }
 
@@ -11,13 +11,13 @@ impl Module for ModuleSine {
         let sample_rate = 48000.0f32;
         self.sample_clock = (self.sample_clock + 1.0);
 
-        self.outs[0].value = (self.sample_clock * 440.0 * 2.0 * std::f32::consts::PI / sample_rate).sin();
+        self.outs[0].value[0] = (self.sample_clock * 440.0 * 2.0 * std::f32::consts::PI / sample_rate).sin();
         //println!("outso:{}", self.outs[0].value)
     }
-    fn inputs(&mut self) -> &mut Vec<Port> {
+    fn inputs(&mut self) -> &mut Vec<AudioPort> {
         &mut self.ins
     }
-    fn outputs(&mut self) -> &mut Vec<Port> {
+    fn outputs(&mut self) -> &mut Vec<AudioPort> {
         &mut self.outs
     }
 }
@@ -26,7 +26,7 @@ impl Default for ModuleSine {
     fn default() -> Self {
         ModuleSine{
             ins: vec![],
-            outs: vec![Port{ value: 0.0 }],
+            outs: AudioPort::create_audio_ports(1),
             sample_clock: 0.0
         }
     }
