@@ -10,6 +10,10 @@ use crate::*;
 
 const FALLBACK_FRAME_SIZE: usize = 64;
 
+
+type ModuleArc = Arc<Mutex<dyn Module>>;
+type ModulePointer = Option<NonNull<dyn Module>>; //need to have nullable dynamic pointer
+
 pub(crate) trait Module {
     fn process(&mut self);
     fn inputs(&mut self) -> &mut Vec<AudioPort>;
@@ -17,10 +21,23 @@ pub(crate) trait Module {
 
     //fn hand_inputs(&mut self) -> &mut Vec<Port>;
     //fn hand_outputs(&mut self) -> &mut Vec<Port>;
+
+
+
 }
 
-type ModulePointer = Option<NonNull<dyn Module>>; //need to have nullable dynamic pointer
+// extract unsafe fat pointer
+fn extract_pointer(module: &mut ModuleArc) -> ModulePointer {
+    return unsafe {
+        let asd: &Mutex<dyn Module> = module.borrow_mut();
+        let qwe: *mut dyn Module = &mut *asd.lock().unwrap() as *mut dyn Module;
+        Some(NonNull::new_unchecked(qwe))
+    };
+}
 
+fn extract_pointer_from_vec(mods: &mut Vec<ModuleArc>, i: usize) -> ModulePointer { // get unsafe fat pointer
+    return extract_pointer(&mut mods[i])
+}
 pub(crate) struct Cable {
     pub input_module_p: ModulePointer,
     pub output_module_p: ModulePointer,
@@ -108,9 +125,10 @@ impl Engine {
     }
 
     //
-    // pub fn add_module(&mut self, module: Mutex<Arc<dyn Module>>){
-    //     self.modules.push(module)
-    //     if
+    // pub fn add_module(&mut self, module: Arc<Mutex<dyn Module>>){
+    //     self.modules.push(module);
+    //     let cor = self.core.lock().unwrap();
+    //    // cor.modules_pointers.append()
     // }
 
     fn start_fallback(&mut self) {
@@ -159,17 +177,27 @@ impl Engine {
             .join().expect("Could not join spawned thread");
         //let cor = self.core.lock().unwrap();
     }
+}
 
-
-    fn get_pointer(mods: &mut Vec<Arc<Mutex<dyn Module>>>, i: usize) -> ModulePointer { // get unsafe fat pointer
-        return unsafe {
-            let asd: &Mutex<dyn Module> = mods[i].borrow_mut();//mods[i].lock().unwrap().clone();
-            //let zxc = *asd.lock().unwrap();
-            let qwe: *mut dyn Module = &mut *asd.lock().unwrap() as *mut dyn Module;//Arc::as_ptr( &asd ) as *mut dyn Module ;
-
-            // = Arc::as_ptr(mods[i])
-            Some(NonNull::new_unchecked(qwe))
-        };
+impl Default for Engine{
+    fn default() -> Self {
+        Engine{
+            modules: vec![],
+            cables: vec![],
+            core: Arc::new(Mutex::new(RealTimeCore {
+                modules_pointers: vec![],
+                default_module: None,
+                cable_core: vec![],
+                sample_rate: 0,
+                current_time: SystemTime::now(),
+                alive: Arc::new(Default::default()),
+                is_fallback_active: Arc::new((Mutex::new(false), Default::default()))
+            })),
+            fallback_mutex: Arc::new((Mutex::new(false), Default::default())),
+            frame_rate: 0,
+            fallback_handle: None,
+            fallback_alive: Arc::new(Default::default())
+        }
     }
 }
 
@@ -182,11 +210,11 @@ pub fn test_engine() -> Engine {
         fallback_handle: None,
         fallback_alive: alive.clone(),
         core: Arc::new(Mutex::new(RealTimeCore {
-            modules_pointers: vec![Engine::get_pointer(&mut mods, 0), Engine::get_pointer(&mut mods, 1)],
+            modules_pointers: vec![extract_pointer_from_vec(&mut mods, 0), extract_pointer_from_vec(&mut mods, 1)],
             default_module: None,
             cable_core: vec![Cable {
-                input_module_p: Engine::get_pointer(&mut mods, 0),
-                output_module_p: Engine::get_pointer(&mut mods, 1),
+                input_module_p: extract_pointer_from_vec(&mut mods, 0),
+                output_module_p: extract_pointer_from_vec(&mut mods, 1),
                 input_port: 0,
                 output_port: 0,
             }],
@@ -197,8 +225,8 @@ pub fn test_engine() -> Engine {
         })),
         fallback_mutex: fallback_active.clone(),
         cables: vec![Mutex::new(Cable {
-            input_module_p: Engine::get_pointer(&mut mods, 0),
-            output_module_p: Engine::get_pointer(&mut mods, 1),
+            input_module_p: extract_pointer_from_vec(&mut mods, 0),
+            output_module_p: extract_pointer_from_vec(&mut mods, 1),
             input_port: 0,
             output_port: 0,
         })],
