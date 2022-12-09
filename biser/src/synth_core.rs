@@ -1,43 +1,15 @@
 pub use std::sync::atomic::{AtomicBool, Ordering};
 //todo
-pub use std::sync::{Arc, Mutex, Condvar};
+pub use std::sync::{Arc, Condvar, Mutex};
 pub use std::{thread, time};
 use std::borrow::{Borrow, BorrowMut};
 use std::ops::Add;
 pub use std::ptr::NonNull;
 use std::time::{Duration, SystemTime};
 use crate::*;
+use crate::module::{Module, ModulePointer};
 
-const FALLBACK_FRAME_SIZE: usize = 64;
-
-
-type ModuleArc = Arc<Mutex<dyn Module>>;
-type ModulePointer = Option<NonNull<dyn Module>>; //need to have nullable dynamic pointer
-
-pub(crate) trait Module {
-    fn process(&mut self);
-    fn inputs(&mut self) -> &mut Vec<AudioPort>;
-    fn outputs(&mut self) -> &mut Vec<AudioPort>;
-
-    //fn hand_inputs(&mut self) -> &mut Vec<Port>;
-    //fn hand_outputs(&mut self) -> &mut Vec<Port>;
-
-
-
-}
-
-// extract unsafe fat pointer
-fn extract_pointer(module: &mut ModuleArc) -> ModulePointer {
-    return unsafe {
-        let asd: &Mutex<dyn Module> = module.borrow_mut();
-        let qwe: *mut dyn Module = &mut *asd.lock().unwrap() as *mut dyn Module;
-        Some(NonNull::new_unchecked(qwe))
-    };
-}
-
-fn extract_pointer_from_vec(mods: &mut Vec<ModuleArc>, i: usize) -> ModulePointer { // get unsafe fat pointer
-    return extract_pointer(&mut mods[i])
-}
+const FALLBACK_FRAME_SIZE: usize = 64; //need to have nullable dynamic pointer
 pub(crate) struct Cable {
     pub input_module_p: ModulePointer,
     pub output_module_p: ModulePointer,
@@ -210,11 +182,11 @@ pub fn test_engine() -> Engine {
         fallback_handle: None,
         fallback_alive: alive.clone(),
         core: Arc::new(Mutex::new(RealTimeCore {
-            modules_pointers: vec![extract_pointer_from_vec(&mut mods, 0), extract_pointer_from_vec(&mut mods, 1)],
+            modules_pointers: vec![crate::module::extract_pointer_from_vec(&mut mods, 0), crate::module::extract_pointer_from_vec(&mut mods, 1)],
             default_module: None,
             cable_core: vec![Cable {
-                input_module_p: extract_pointer_from_vec(&mut mods, 0),
-                output_module_p: extract_pointer_from_vec(&mut mods, 1),
+                input_module_p: crate::module::extract_pointer_from_vec(&mut mods, 0),
+                output_module_p: crate::module::extract_pointer_from_vec(&mut mods, 1),
                 input_port: 0,
                 output_port: 0,
             }],
@@ -225,8 +197,8 @@ pub fn test_engine() -> Engine {
         })),
         fallback_mutex: fallback_active.clone(),
         cables: vec![Mutex::new(Cable {
-            input_module_p: extract_pointer_from_vec(&mut mods, 0),
-            output_module_p: extract_pointer_from_vec(&mut mods, 1),
+            input_module_p: crate::module::extract_pointer_from_vec(&mut mods, 0),
+            output_module_p: crate::module::extract_pointer_from_vec(&mut mods, 1),
             input_port: 0,
             output_port: 0,
         })],

@@ -3,7 +3,7 @@ use std::vec::Vec;
 const CHANELS: usize = 16;
 
 #[derive(Clone, Copy)]
-pub(crate) struct AudioPort {
+pub struct AudioPort {
     pub value: [f32;CHANELS],
     pub count: usize, // TODO make it const
 }
