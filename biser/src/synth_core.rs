@@ -1,15 +1,14 @@
-pub use std::sync::atomic::{AtomicBool, Ordering}; //todo
-pub use std::sync::{Arc, Mutex,Condvar};
+pub use std::sync::atomic::{AtomicBool, Ordering};
+//todo
+pub use std::sync::{Arc, Mutex, Condvar};
 pub use std::{thread, time};
+use std::borrow::{Borrow, BorrowMut};
 use std::ops::Add;
 pub use std::ptr::NonNull;
 use std::time::{Duration, SystemTime};
 use crate::*;
 
-
-
 const FALLBACK_FRAME_SIZE: usize = 64;
-
 
 pub(crate) trait Module {
     fn process(&mut self);
@@ -19,6 +18,7 @@ pub(crate) trait Module {
     //fn hand_inputs(&mut self) -> &mut Vec<Port>;
     //fn hand_outputs(&mut self) -> &mut Vec<Port>;
 }
+
 type ModulePointer = Option<NonNull<dyn Module>>; //need to have nullable dynamic pointer
 
 pub(crate) struct Cable {
@@ -28,13 +28,12 @@ pub(crate) struct Cable {
     pub output_port: usize,
 }
 
-pub(crate) trait DefaultModuleInterface{
+pub(crate) trait DefaultModuleInterface {}
 
-}
 type DefaultModulePointer = Option<NonNull<dyn DefaultModuleInterface>>;
 
 
-pub(crate) trait DefaultModule{
+pub(crate) trait DefaultModule {
     fn defult_module_interface() -> DefaultModulePointer;
 }
 
@@ -54,7 +53,8 @@ macro_rules! is_default_module {
 }
 
 struct RealTimeCore {
-    pub modules_pointers: Vec<ModulePointer>, //todo arc?
+    pub modules_pointers: Vec<ModulePointer>,
+    //todo arc?
     pub default_module: DefaultModulePointer,
     pub cable_core: Vec<Cable>,
     pub sample_rate: i64,
@@ -64,10 +64,10 @@ struct RealTimeCore {
 }
 
 unsafe impl Send for RealTimeCore {}
+
 unsafe impl Sync for RealTimeCore {}
 
 impl RealTimeCore {
-
     pub fn compute_frame(&mut self, time_frame: usize) { // TODO does it vectorized automativally?
         unsafe {
             for _ in 0..time_frame {
@@ -86,26 +86,24 @@ impl RealTimeCore {
 }
 
 pub struct Engine {
-    modules: Vec<Mutex<Arc<dyn Module>>>,
+    modules: Vec<Arc<Mutex<dyn Module>>>,
     cables: Vec<Mutex<Cable>>,
     core: Arc<Mutex<RealTimeCore>>,
 
     fallback_mutex: Arc<(Mutex<bool>, Condvar)>,
     frame_rate: i64,
 
-
-
     fallback_handle: Option<thread::JoinHandle<()>>,
     fallback_alive: Arc<AtomicBool>, // alive of tread itself
 }
 
 impl Engine {
-    pub fn start(&mut self){
+    pub fn start(&mut self) {
         self.fallback_alive.store(true, Ordering::SeqCst);
         self.start_fallback();
     }
 
-    pub fn stop(&mut self){
+    pub fn stop(&mut self) {
         self.stop_fallback();
     }
 
@@ -118,23 +116,23 @@ impl Engine {
     fn start_fallback(&mut self) {
         dbg!("starting fallback...");
         let cor = self.core.clone();
-        self.fallback_handle = Some(std::thread::spawn(move || {
+        self.fallback_handle = Some(thread::spawn(move || {
             let mut alive = cor.lock().unwrap().alive.clone();
             alive.store(true, Ordering::SeqCst);
             {
                 let mut cor = cor.lock().unwrap();
                 cor.current_time = SystemTime::now();
             }
-            let mut samples_count : i64 = 0;
+            let mut samples_count: i64 = 0;
             while alive.load(Ordering::SeqCst) {
                 let mut cor = cor.lock().unwrap();
                 let duration = cor.current_time.elapsed().unwrap().as_millis() as i64;
                 let required_samples = cor.sample_rate * duration / 1000;
-                if(required_samples < samples_count)
+                if required_samples < samples_count
                 {
                     let pause_millis = (samples_count - required_samples) * 1000i64 / cor.sample_rate;
                     //dbg!(pause_millis);
-                    thread::sleep(time::Duration::from_millis(std::cmp::max(pause_millis as u64, 1)));
+                    thread::sleep(Duration::from_millis(std::cmp::max(pause_millis as u64, 1)));
                     continue;
                 }
                 cor.compute_frame(FALLBACK_FRAME_SIZE);
@@ -159,26 +157,31 @@ impl Engine {
         self.fallback_handle
             .take().expect("Called stop on non-running thread")
             .join().expect("Could not join spawned thread");
-        let cor = self.core.lock().unwrap();
+        //let cor = self.core.lock().unwrap();
     }
 
 
-    fn get_pointer(mods: &mut Vec<Mutex<Arc<dyn Module>>>, i: usize) -> ModulePointer{ // get unsafe fat pointer
+    fn get_pointer(mods: &mut Vec<Arc<Mutex<dyn Module>>>, i: usize) -> ModulePointer { // get unsafe fat pointer
         return unsafe {
-            Some(NonNull::new_unchecked(Arc::as_ptr(&mut *mods[i].lock().unwrap()) as *mut dyn Module))
+            let asd: &Mutex<dyn Module> = mods[i].borrow_mut();//mods[i].lock().unwrap().clone();
+            //let zxc = *asd.lock().unwrap();
+            let qwe: *mut dyn Module = &mut *asd.lock().unwrap() as *mut dyn Module;//Arc::as_ptr( &asd ) as *mut dyn Module ;
+
+            // = Arc::as_ptr(mods[i])
+            Some(NonNull::new_unchecked(qwe))
         };
     }
 }
 
 pub fn test_engine() -> Engine {
-    let mut mods: Vec<Mutex<Arc<dyn Module>>> = vec![Mutex::new(Arc::new(crate::sine::ModuleSine::default())),
-                                                     Mutex::new(Arc::new(crate::audio_o::ModuleO::default()))];
+    let mut mods: Vec<Arc<Mutex<dyn Module>>> = vec![Arc::new(Mutex::new(sine::ModuleSine::default())),
+                                                     Arc::new(Mutex::new(audio_o::ModuleO::default()))];
     let alive: Arc<AtomicBool> = Arc::new(AtomicBool::default());
     let fallback_active: Arc<(Mutex<bool>, Condvar)> = Arc::new((Mutex::new(true), Condvar::new()));
     Engine {
         fallback_handle: None,
         fallback_alive: alive.clone(),
-        core: Arc::new(std::sync::Mutex::new(RealTimeCore {
+        core: Arc::new(Mutex::new(RealTimeCore {
             modules_pointers: vec![Engine::get_pointer(&mut mods, 0), Engine::get_pointer(&mut mods, 1)],
             default_module: None,
             cable_core: vec![Cable {
@@ -190,7 +193,7 @@ pub fn test_engine() -> Engine {
             sample_rate: 96000,
             current_time: SystemTime::now(),
             alive: alive.clone(),
-            is_fallback_active: fallback_active.clone()
+            is_fallback_active: fallback_active.clone(),
         })),
         fallback_mutex: fallback_active.clone(),
         cables: vec![Mutex::new(Cable {
@@ -200,6 +203,6 @@ pub fn test_engine() -> Engine {
             output_port: 0,
         })],
         modules: mods,
-        frame_rate: 48000
+        frame_rate: 48000,
     }
 }
