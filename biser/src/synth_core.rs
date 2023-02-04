@@ -17,30 +17,6 @@ pub(crate) struct Cable {
     pub output_port: usize,
 }
 
-pub(crate) trait DefaultModuleInterface {}
-
-type DefaultModulePointer = Option<NonNull<dyn DefaultModuleInterface>>;
-
-
-pub(crate) trait DefaultModule {
-    fn defult_module_interface() -> DefaultModulePointer;
-}
-
-//Specialized for audio only for executing worker thread in it
-macro_rules! is_default_module {
-    ($($t:ty),+ $(,)?) => ($(
-        impl DefaultModule for $t {
-            fn jobs(&self) -> Box<De> {
-                &self.defa
-            }
-
-            fn jobs_mut(&mut self) -> &mut Vec<String> {
-                &mut self.jobs
-            }
-        }
-    )+)
-}
-
 struct RealTimeCore {
     pub modules_pointers: Vec<ModulePointer>,
     //todo arc?
@@ -127,7 +103,7 @@ impl Engine {
                 }
                 cor.compute_frame(FALLBACK_FRAME_SIZE);
                 samples_count = samples_count + FALLBACK_FRAME_SIZE as i64;
-                dbg!(samples_count);
+                //dbg!(samples_count);
                 //thread::sleep(time::Duration::from_millis(10));
             }
         }));
@@ -190,7 +166,7 @@ pub fn test_engine() -> Engine {
                 input_port: 0,
                 output_port: 0,
             }],
-            sample_rate: 96000,
+            sample_rate: 44100 * 8,
             current_time: SystemTime::now(),
             alive: alive.clone(),
             is_fallback_active: fallback_active.clone(),
@@ -203,6 +179,6 @@ pub fn test_engine() -> Engine {
             output_port: 0,
         })],
         modules: mods,
-        frame_rate: 48000,
+        frame_rate: 44100,
     }
 }

@@ -5,7 +5,7 @@ const CHANELS: usize = 16;
 #[derive(Clone, Copy)]
 pub struct AudioPort {
     pub value: [f32;CHANELS],
-    pub count: usize, // TODO make it const
+    pub count: usize, //count of channels inside port (<= CHANELS)
 }
 impl Default for AudioPort{
     fn default() -> Self {

@@ -7,8 +7,9 @@ use crate::synth_core::*;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::StreamError;
 use crate::*;
-
 use ringbuf::{Consumer, Producer, RingBuffer};
+
+const MAX_PORTS: usize = 8;
 
 pub struct ModuleO {
     ins: Vec<AudioPort>,
@@ -18,8 +19,21 @@ pub struct ModuleO {
     config: cpal::StreamConfig,
     producer: Producer<f32>,
     stream: cpal::Stream,
+    pub device_sample_rate: Option<i32>,
 }
 
+struct ModuleIODefaultStruct{
+    pub module: *const ModuleO,
+}
+impl DefaultModuleInterface for ModuleIODefaultStruct{
+    fn recommended_sample_rate() -> Option<i32> {
+        unsafe{
+            return (&module as &mut ModuleO).device_sample_rate
+        }
+
+    }
+
+}
 impl Module for ModuleO {
     fn process(&mut self) {
         unsafe {
@@ -75,7 +89,7 @@ impl ModuleO {
                 eprintln!("input stream fell behind: try increasing latency");
             }
 
-            dbg!(count, count_samples, count_samples2);
+           // dbg!(count, count_samples, count_samples2);
         }
     }
 
@@ -104,8 +118,8 @@ impl Default for ModuleO {
         stream.play().unwrap();
 
         ModuleO {
-            ins: AudioPort::create_audio_ports(1),
-            outs: vec![],
+            ins: AudioPort::create_audio_ports(MAX_PORTS),
+            outs:  AudioPort::create_audio_ports(MAX_PORTS),
             host: host,
             device: device,
             config: config,
