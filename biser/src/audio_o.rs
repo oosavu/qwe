@@ -8,7 +8,8 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::StreamError;
 use crate::*;
 
-use ringbuf::{Consumer, Producer, RingBuffer};
+use ringbuf::{HeapConsumer, HeapProducer, HeapRb};
+//use ringbuf::HeapRb;
 
 pub struct ModuleO {
     ins: Vec<AudioPort>,
@@ -16,7 +17,7 @@ pub struct ModuleO {
     host: cpal::Host,
     device: cpal::Device,
     config: cpal::StreamConfig,
-    producer: Producer<f32>,
+    producer: HeapProducer<f32>,
     stream: cpal::Stream,
 }
 
@@ -44,7 +45,7 @@ impl ModuleO {
     }
 
     fn data_fn(
-        consumer: &mut Consumer<f32>,
+        consumer: &mut HeapConsumer<f32>,
         data: &mut [f32],
         calback_info: &cpal::OutputCallbackInfo,
     ) {
@@ -87,7 +88,7 @@ impl Default for ModuleO {
     fn default() -> Self {
         let host = cpal::default_host();
         let device = host.default_output_device().unwrap();
-        let buffer = RingBuffer::new(12345);
+        let buffer = HeapRb::new(12345);
         let (mut producer, mut consumer) = buffer.split();
 
         let config = device.default_output_config().unwrap().into();
@@ -99,6 +100,7 @@ impl Default for ModuleO {
                     Self::data_fn(&mut consumer, data, output_device)
                 },
                 &Self::error_fn,
+                None
             )
             .unwrap();
         stream.play().unwrap();
